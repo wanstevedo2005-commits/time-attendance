@@ -29,9 +29,9 @@
   <canvas id="canvas"></canvas>
 
   <script>
+    // ข้อมูลเชื่อมต่อระบบของคุณ
     const LIFF_ID = "2010049335-xhTAw8Mi"; 
-    // ▼▼▼ นำ Web App URL ของ Google Apps Script มาใส่ตรงนี้ ▼▼▼
-    const GAS_API_URL = "ใส่_WEB_APP_URL_ของคุณที่นี่"; 
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwSBHeswptojhNiHKeIsgo3cwaTEjOfBqPhJnY8GmGw_abhfPMk87FEA5dGm1j27gLm3A/exec"; 
 
     const cameraInput = document.getElementById('cameraInput');
     const cameraBtn = document.getElementById('cameraBtn');
@@ -97,15 +97,25 @@
     };
 
     sendBtn.onclick = async () => {
+      if (!finalImageData || !finalImageData.includes("base64,")) {
+        alert("ประมวลผลรูปภาพไม่สมบูรณ์ กรุณากดถ่ายรูปใหม่อีกครั้ง");
+        return;
+      }
+
       sendBtn.disabled = true;
       sendBtn.innerText = "กำลังส่งข้อมูล... ห้ามปิดหน้าจอ";
       statusText.innerText = "กำลังเชื่อมต่อฐานข้อมูล...";
 
       try {
-        // ยิงข้อมูลไปหา Google Apps Script ผ่าน API
+        const payload = JSON.stringify({ userId: userLineId, image: finalImageData });
+        
         const response = await fetch(GAS_API_URL, {
           method: 'POST',
-          body: JSON.stringify({ userId: userLineId, image: finalImageData })
+          redirect: 'follow', 
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8", 
+          },
+          body: payload
         });
         
         const result = await response.json();
@@ -120,7 +130,7 @@
       } catch (error) {
         statusText.innerText = "❌ เกิดข้อผิดพลาด: " + error.message;
         sendBtn.disabled = false;
-        sendBtn.innerText = "ลองส่งใหม่อีกครั้ง";
+        sendBtn.innerText = "🚀 ลองส่งใหม่อีกครั้ง";
       }
     };
   </script>
