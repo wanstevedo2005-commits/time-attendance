@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบเข้างาน SN Kohlarn</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; margin: 0; }
+    h2 { color: #333; }
+    .btn { padding: 15px 20px; font-size: 18px; color: white; border: none; border-radius: 8px; margin-top: 15px; width: 100%; max-width: 350px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    #cameraBtn { background: #007bff; }
+    #sendBtn { background: #00b900; display: none; }
+    .btn:disabled { background: #999; cursor: not-allowed; }
+    #preview { width: 100%; max-width: 350px; border-radius: 10px; border: 2px solid #ccc; margin-top: 15px; display: none; }
+    #canvas { display: none; }
+    #status { margin-top: 15px; color: #555; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>📍 ถ่ายรูปลงเวลาเข้างาน</h2>
+  <div id="status">กำลังโหลดระบบ LINE...</div>
+
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+  <button id="cameraBtn" class="btn" disabled>📸 เปิดกล้องถ่ายรูป</button>
+  <img id="preview" alt="ภาพตัวอย่าง">
+  <button id="sendBtn" class="btn">🚀 ส่งข้อมูลเข้างาน</button>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const LIFF_ID = "2010049335-xhTAw8Mi"; 
+    // ▼▼▼ นำ Web App URL ของ Google Apps Script มาใส่ตรงนี้ ▼▼▼
+    const GAS_API_URL = "ใส่_WEB_APP_URL_ของคุณที่นี่"; 
+
+    const cameraInput = document.getElementById('cameraInput');
+    const cameraBtn = document.getElementById('cameraBtn');
+    const sendBtn = document.getElementById('sendBtn');
+    const preview = document.getElementById('preview');
+    const canvas = document.getElementById('canvas');
+    const statusText = document.getElementById('status');
+
+    let userLineId = "";
+    let finalImageData = "";
+
+    liff.init({ liffId: LIFF_ID }).then(() => {
+      if (!liff.isLoggedIn()) {
+        liff.login();
+      } else {
+        liff.getProfile().then(profile => {
+          userLineId = profile.userId;
+          statusText.innerText = "ระบบพร้อมใช้งาน กดปุ่มเพื่อถ่ายรูปได้เลย";
+          cameraBtn.disabled = false;
+        });
+      }
+    }).catch(err => statusText.innerText = "Error: " + err.message);
+
+    cameraBtn.onclick = () => cameraInput.click();
+
+    cameraInput.onchange = (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      statusText.innerText = "กำลังประมวลผลรูปภาพ...";
+      cameraBtn.style.display = "none";
+
+      const img = new Image();
+      img.onload = () => {
+        const MAX_WIDTH = 800;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_WIDTH) {
+          height = Math.floor((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const timeString = new Date().toLocaleString('th-TH');
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(0, 10, width, 50);
+        ctx.font = "bold 24px Arial";
+        ctx.fillStyle = "yellow";
+        ctx.fillText("เวลาเข้างาน: " + timeString, 15, 45);
+
+        finalImageData = canvas.toDataURL('image/jpeg', 0.7);
+        preview.src = finalImageData;
+        preview.style.display = "inline-block";
+
+        statusText.innerText = "ตรวจสอบรูปภาพแล้วกดปุ่มส่งข้อมูล";
+        sendBtn.style.display = "inline-block";
+      };
+      img.src = URL.createObjectURL(file);
+    };
+
+    sendBtn.onclick = async () => {
+      sendBtn.disabled = true;
+      sendBtn.innerText = "กำลังส่งข้อมูล... ห้ามปิดหน้าจอ";
+      statusText.innerText = "กำลังเชื่อมต่อฐานข้อมูล...";
+
+      try {
+        // ยิงข้อมูลไปหา Google Apps Script ผ่าน API
+        const response = await fetch(GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ userId: userLineId, image: finalImageData })
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          statusText.innerText = `✅ บันทึกเวลาสำเร็จ! (${result.name})`;
+          sendBtn.innerText = "เสร็จเรียบร้อย";
+          setTimeout(() => liff.closeWindow(), 3000); 
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        statusText.innerText = "❌ เกิดข้อผิดพลาด: " + error.message;
+        sendBtn.disabled = false;
+        sendBtn.innerText = "ลองส่งใหม่อีกครั้ง";
+      }
+    };
+  </script>
+</body>
+</html>
