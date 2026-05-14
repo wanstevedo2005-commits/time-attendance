@@ -1,138 +1,264 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบเข้างาน</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <style>
-    body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; margin: 0; }
-    h2 { color: #333; }
-    .btn { padding: 15px 20px; font-size: 18px; color: white; border: none; border-radius: 8px; margin-top: 15px; width: 100%; max-width: 350px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    #cameraBtn { background: #007bff; }
-    #sendBtn { background: #00b900; display: none; }
-    .btn:disabled { background: #999; cursor: not-allowed; }
-    #preview { width: 100%; max-width: 350px; border-radius: 10px; border: 2px solid #ccc; margin-top: 15px; display: none; }
-    #canvas { display: none; }
-    #status { margin-top: 15px; color: #555; font-weight: bold; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบลงเวลาเข้างาน | Check-in System v2.1</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Sarabun:wght@400;700&display=swap');
+        body { 
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background-color: #f1f5f9;
+        }
+        .btn-animate { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-animate:active { transform: scale(0.95); }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out infinite; }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
 </head>
-<body>
-  <h2>📍 ถ่ายรูปลงเวลาเข้างาน</h2>
-  <div id="status">กำลังโหลดระบบ LINE...</div>
+<body class="flex items-center justify-center min-h-screen p-4">
 
-  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
-  <button id="cameraBtn" class="btn" disabled>📸 เปิดกล้องถ่ายรูป</button>
-  <img id="preview" alt="ภาพตัวอย่าง">
-  <button id="sendBtn" class="btn">🚀 ส่งข้อมูลเข้างาน</button>
+    <div class="w-full max-w-md">
+        <div class="glass-card rounded-[3rem] shadow-2xl overflow-hidden border border-slate-200">
+            
+            <!-- Header -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-8 text-white text-center relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-5">
+                    <i class="fa-solid fa-clock text-9xl -rotate-12"></i>
+                </div>
+                <h2 class="text-2xl font-black tracking-tight relative z-10">บันทึกเวลาทำงาน</h2>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-1 relative z-10">Work Hour Synchronization</p>
+            </div>
 
-  <canvas id="canvas"></canvas>
+            <div class="p-8">
+                <!-- Status Box -->
+                <div id="statusBox" class="bg-slate-100 rounded-2xl p-4 mb-6 flex items-center gap-3 border border-slate-200">
+                    <div id="statusDot" class="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span id="status" class="text-[10px] font-black text-slate-600 uppercase tracking-wider">กำลังเชื่อมต่อ LINE...</span>
+                </div>
 
-  <script>
-    // ข้อมูลเชื่อมต่อระบบของคุณ
-    const LIFF_ID = "2010049335-xhTAw8Mi"; 
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwSBHeswptojhNiHKeIsgo3cwaTEjOfBqPhJnY8GmGw_abhfPMk87FEA5dGm1j27gLm3A/exec"; 
+                <!-- Case 1: On Time View -->
+                <div id="onTimeView" class="hidden text-center mb-6 animate-pop">
+                    <div class="h-24 w-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-100 border-4 border-white">
+                        <i class="fa-solid fa-check text-4xl"></i>
+                    </div>
+                    <h3 class="text-emerald-600 font-black text-xl">เข้างานตรงเวลา!</h3>
+                    <p class="text-slate-400 text-xs font-bold mt-1 uppercase tracking-tighter">ยินดีด้วย คุณรักษาสถิติได้ดีเยี่ยม</p>
+                </div>
 
-    const cameraInput = document.getElementById('cameraInput');
-    const cameraBtn = document.getElementById('cameraBtn');
-    const sendBtn = document.getElementById('sendBtn');
-    const preview = document.getElementById('preview');
-    const canvas = document.getElementById('canvas');
-    const statusText = document.getElementById('status');
+                <!-- Case 2: Late View -->
+                <div id="lateView" class="hidden mb-6 text-center animate-shake">
+                    <div class="relative inline-block mb-4">
+                        <img src="https://i.postimg.cc/7YtdqNVk/depositphotos-23480907-stock-photo-human-hand-pointing.webp" alt="late warning" class="w-28 h-28 mx-auto rounded-full object-cover border-4 border-rose-500 shadow-xl">
+                        <div class="absolute -top-2 -right-2 bg-rose-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                            <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                        </div>
+                    </div>
+                    <div class="text-rose-600 font-black text-sm leading-relaxed px-4">
+                        คุณมาสาย! <br> 
+                        <span class="text-rose-500 font-bold bg-rose-50 px-2 py-1 rounded-lg block mt-2">กรุณาโทรไปสารภาพความผิดกับเจ๊เดี๋ยวนี้ ⚠️</span>
+                    </div>
+                </div>
 
-    let userLineId = "";
-    let finalImageData = "";
+                <div class="space-y-4">
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
 
-    liff.init({ liffId: LIFF_ID }).then(() => {
-      if (!liff.isLoggedIn()) {
-        liff.login();
-      } else {
-        liff.getProfile().then(profile => {
-          userLineId = profile.userId;
-          statusText.innerText = "ระบบพร้อมใช้งาน กดปุ่มเพื่อถ่ายรูปได้เลย";
-          cameraBtn.disabled = false;
+                    <button id="cameraBtn" disabled class="btn-animate w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl shadow-blue-100 disabled:opacity-50 disabled:grayscale">
+                        <i class="fa-solid fa-camera text-lg"></i>
+                        เปิดกล้องถ่ายรูป
+                    </button>
+
+                    <div id="previewContainer" class="hidden">
+                        <div class="relative rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100 aspect-[3/4]">
+                            <img id="preview" class="w-full h-full object-cover">
+                            <div id="imageStatusTag" class="absolute top-4 right-4 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white shadow-lg">
+                                PREVIEW
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mt-6">
+                            <button onclick="location.reload()" class="btn-animate bg-white border border-slate-200 text-slate-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest">
+                                <i class="fa-solid fa-arrow-rotate-left mr-2"></i>ถ่ายใหม่
+                            </button>
+                            <button id="sendBtn" class="btn-animate bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:bg-blue-600">
+                                <i class="fa-solid fa-paper-plane mr-2"></i>ส่งข้อมูล
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-center text-slate-300 text-[9px] mt-10 font-bold uppercase tracking-[0.2em]">
+                    Timestamp Security System v2.1
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="canvas" class="hidden"></canvas>
+
+    <div id="loadingOverlay" class="fixed inset-0 bg-white/95 backdrop-blur-md z-50 hidden flex-col items-center justify-center">
+        <div class="h-16 w-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
+        <p id="loadingText" class="mt-6 font-black text-slate-900 text-xs uppercase tracking-widest">กำลังยืนยันข้อมูล...</p>
+    </div>
+
+    <script>
+        // ข้อมูลเชื่อมต่อระบบ
+        const LIFF_ID = "2010049335-xhTAw8Mi"; 
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwSBHeswptojhNiHKeIsgo3cwaTEjOfBqPhJnY8GmGw_abhfPMk87FEA5dGm1j27gLm3A/exec";
+
+        const cameraInput = document.getElementById('cameraInput');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const preview = document.getElementById('preview');
+        const previewContainer = document.getElementById('previewContainer');
+        const canvas = document.getElementById('canvas');
+        const statusText = document.getElementById('status');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        
+        const onTimeView = document.getElementById('onTimeView');
+        const lateView = document.getElementById('lateView');
+        const imageStatusTag = document.getElementById('imageStatusTag');
+
+        let userLineId = "";
+        let finalImageData = "";
+
+        // Init LIFF
+        liff.init({ liffId: LIFF_ID }).then(() => {
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            } else {
+                liff.getProfile().then(profile => {
+                    userLineId = profile.userId;
+                    statusText.innerText = "ระบบพร้อมใช้งาน";
+                    document.getElementById('statusDot').classList.replace('bg-blue-500', 'bg-emerald-500');
+                    cameraBtn.disabled = false;
+                });
+            }
+        }).catch(err => {
+            statusText.innerText = "Error: " + err.message;
         });
-      }
-    }).catch(err => statusText.innerText = "Error: " + err.message);
 
-    cameraBtn.onclick = () => cameraInput.click();
+        cameraBtn.onclick = () => cameraInput.click();
 
-    cameraInput.onchange = (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
+        cameraInput.onchange = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
 
-      statusText.innerText = "กำลังประมวลผลรูปภาพ...";
-      cameraBtn.style.display = "none";
+            statusText.innerText = "กำลังสร้างลายน้ำดิจิทัล...";
+            cameraBtn.classList.add('hidden');
 
-      const img = new Image();
-      img.onload = () => {
-        const MAX_WIDTH = 800;
-        let width = img.width;
-        let height = img.height;
-        if (width > MAX_WIDTH) {
-          height = Math.floor((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
+            const img = new Image();
+            img.onload = () => {
+                const MAX_WIDTH = 1000;
+                let width = img.width;
+                let height = img.height;
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+                if (width > MAX_WIDTH) {
+                    height = Math.floor((height * MAX_WIDTH) / width);
+                    width = MAX_WIDTH;
+                }
 
-        const timeString = new Date().toLocaleString('th-TH');
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.fillRect(0, 10, width, 50);
-        ctx.font = "bold 24px Arial";
-        ctx.fillStyle = "yellow";
-        ctx.fillText("เวลาเข้างาน: " + timeString, 15, 45);
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
 
-        finalImageData = canvas.toDataURL('image/jpeg', 0.7);
-        preview.src = finalImageData;
-        preview.style.display = "inline-block";
+                const now = new Date();
+                const h = now.getHours();
+                const m = now.getMinutes();
+                const isLate = (h > 8) || (h === 8 && m > 40); // กำหนดเวลาเข้างาน 08:40
 
-        statusText.innerText = "ตรวจสอบรูปภาพแล้วกดปุ่มส่งข้อมูล";
-        sendBtn.style.display = "inline-block";
-      };
-      img.src = URL.createObjectURL(file);
-    };
+                const timeString = now.toLocaleString('th-TH', { 
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
 
-    sendBtn.onclick = async () => {
-      if (!finalImageData || !finalImageData.includes("base64,")) {
-        alert("ประมวลผลรูปภาพไม่สมบูรณ์ กรุณากดถ่ายรูปใหม่อีกครั้ง");
-        return;
-      }
+                // Watermark Styling
+                ctx.fillStyle = isLate ? "rgba(225, 29, 72, 0.7)" : "rgba(15, 23, 42, 0.5)";
+                ctx.fillRect(0, height - 100, width, 100);
 
-      sendBtn.disabled = true;
-      sendBtn.innerText = "กำลังส่งข้อมูล... ห้ามปิดหน้าจอ";
-      statusText.innerText = "กำลังเชื่อมต่อฐานข้อมูล...";
+                ctx.font = "bold 32px Sarabun, sans-serif";
+                ctx.fillStyle = "#ffffff";
+                ctx.fillText((isLate ? "🚨 มาสาย: " : "✅ เข้างาน: ") + timeString, 40, height - 45);
 
-      try {
-        const payload = JSON.stringify({ userId: userLineId, image: finalImageData });
-        
-        const response = await fetch(GAS_API_URL, {
-          method: 'POST',
-          redirect: 'follow', 
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8", 
-          },
-          body: payload
-        });
-        
-        const result = await response.json();
-        
-        if (result.status === "success") {
-          statusText.innerText = `✅ บันทึกเวลาสำเร็จ! (${result.name})`;
-          sendBtn.innerText = "เสร็จเรียบร้อย";
-          setTimeout(() => liff.closeWindow(), 3000); 
-        } else {
-          throw new Error(result.message);
-        }
-      } catch (error) {
-        statusText.innerText = "❌ เกิดข้อผิดพลาด: " + error.message;
-        sendBtn.disabled = false;
-        sendBtn.innerText = "🚀 ลองส่งใหม่อีกครั้ง";
-      }
-    };
-  </script>
+                finalImageData = canvas.toDataURL('image/jpeg', 0.8);
+                preview.src = finalImageData;
+                previewContainer.classList.remove('hidden');
+
+                if (isLate) {
+                    lateView.classList.remove('hidden');
+                    onTimeView.classList.add('hidden');
+                    imageStatusTag.innerText = "LATE";
+                    imageStatusTag.className = "absolute top-4 right-4 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-rose-600 text-white shadow-lg";
+                    statusText.innerText = "ตรวจพบการเข้างานสาย";
+                } else {
+                    onTimeView.classList.remove('hidden');
+                    lateView.classList.add('hidden');
+                    imageStatusTag.innerText = "ON TIME";
+                    imageStatusTag.className = "absolute top-4 right-4 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-lg";
+                    statusText.innerText = "เข้างานตรงเวลา";
+                }
+            };
+            
+            img.src = URL.createObjectURL(file);
+        };
+
+        sendBtn.onclick = async () => {
+            if (!finalImageData || !finalImageData.includes("base64,")) {
+                alert("รูปภาพไม่สมบูรณ์ กรุณาถ่ายรูปใหม่");
+                return;
+            }
+
+            sendBtn.disabled = true;
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
+            document.getElementById('loadingText').innerText = "กำลังเชื่อมต่อฐานข้อมูล...";
+
+            try {
+                const payload = JSON.stringify({ userId: userLineId, image: finalImageData });
+                
+                const response = await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    redirect: 'follow', 
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: payload
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    document.getElementById('loadingText').innerText = "✅ บันทึกสำเร็จ! (" + result.name + ")";
+                    setTimeout(() => liff.closeWindow(), 3000); 
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+                alert("❌ เกิดข้อผิดพลาด: " + error.message);
+                sendBtn.disabled = false;
+                statusText.innerText = "กรุณาลองส่งใหม่อีกครั้ง";
+            }
+        };
+    </script>
 </body>
 </html>
