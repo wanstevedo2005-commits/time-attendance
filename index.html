@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบลงเวลาเข้างาน | Check-in System v2.2</title>
+    <title>ระบบลงเวลาเข้างาน | Check-in System v2.3</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -22,13 +22,6 @@
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
         .animate-modal { animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            75% { transform: translateX(8px); }
-        }
-        .animate-shake { animation: shake 0.2s ease-in-out 3; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -68,12 +61,10 @@
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4 mt-6">
-                            <button onclick="location.reload()" class="btn-animate bg-white border border-slate-200 text-slate-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest">
-                                <i class="fa-solid fa-arrow-rotate-left mr-2"></i>ถ่ายใหม่
-                            </button>
-                            <button id="sendBtn" class="btn-animate bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg">
-                                <i class="fa-solid fa-paper-plane mr-2"></i>ส่งข้อมูล
+                        <div class="mt-6">
+                            <!-- เอาปุ่มถ่ายใหม่ออก และปรับปุ่มส่งข้อมูลให้เต็มความกว้าง -->
+                            <button id="sendBtn" class="btn-animate w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg">
+                                <i class="fa-solid fa-paper-plane mr-2"></i>ส่งข้อมูลเข้างาน
                             </button>
                         </div>
                     </div>
@@ -98,7 +89,8 @@
 
             <!-- Late Warning -->
             <div id="lateWarning" class="hidden">
-                <img src="https://i.postimg.cc/7YtdqNVk/depositphotos-23480907-stock-photo-human-hand-pointing.webp" alt="warning" class="w-32 h-32 mx-auto rounded-full object-cover border-8 border-rose-100 shadow-xl mb-6 animate-shake">
+                <!-- นำ class animate-shake ออกแล้ว -->
+                <img src="https://i.postimg.cc/7YtdqNVk/depositphotos-23480907-stock-photo-human-hand-pointing.webp" alt="warning" class="w-32 h-32 mx-auto rounded-full object-cover border-8 border-rose-100 shadow-xl mb-6">
                 <h3 class="text-2xl font-black text-rose-600 uppercase">คุณมาสาย!</h3>
                 <p class="text-rose-500 font-bold mt-4 leading-relaxed bg-rose-50 p-4 rounded-2xl border border-rose-100">
                     ⚠️ กรุณาโทรไปสารภาพความผิด<br>กับเจ๊เดี๋ยวนี้!
