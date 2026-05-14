@@ -3,110 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบลงเวลาเข้างาน | Check-in System v2.3</title>
+    <title>ระบบลงเวลาเข้างาน | Check-in System</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Sarabun:wght@400;700&display=swap');
-        body { 
-            font-family: 'Inter', 'Sarabun', sans-serif;
-            background-color: #f1f5f9;
-        }
+        body { font-family: 'Inter', 'Sarabun', sans-serif; background-color: #f8fafc; margin: 0; }
         .btn-animate { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .btn-animate:active { transform: scale(0.95); }
-        
-        /* Modal Animation */
+        .btn-animate:active { transform: scale(0.98); }
         @keyframes modalPop {
-            0% { transform: scale(0.9) translateY(20px); opacity: 0; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
-        .animate-modal { animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .animate-modal { animation: modalPop 0.3s ease-out forwards; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="p-5 flex flex-col items-center justify-center min-h-screen">
 
-    <div class="w-full max-w-md">
-        <div class="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-200">
+    <div class="w-full max-w-md bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+        <div class="bg-slate-900 p-8 text-white text-center">
+            <h2 class="text-2xl font-black">📍 ถ่ายรูปลงเวลา</h2>
+            <p id="status" class="text-slate-400 text-xs mt-2 font-bold uppercase tracking-widest">กำลังโหลดระบบ LINE...</p>
+        </div>
+
+        <div class="p-8 space-y-5">
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
             
-            <!-- Header -->
-            <div class="bg-slate-900 p-8 text-white text-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-4 opacity-5">
-                    <i class="fa-solid fa-clock text-9xl -rotate-12"></i>
+            <!-- ปุ่มกล้อง -->
+            <button id="cameraBtn" disabled class="btn-animate w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-lg shadow-lg shadow-blue-200 flex items-center justify-center gap-3 disabled:bg-slate-300">
+                <i class="fa-solid fa-camera"></i> เปิดกล้องถ่ายรูป
+            </button>
+
+            <!-- แสดงตัวอย่างรูป -->
+            <div id="previewContainer" class="hidden animate-modal">
+                <div class="relative rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-slate-50 aspect-[3/4]">
+                    <img id="preview" class="w-full h-full object-cover">
                 </div>
-                <h2 class="text-2xl font-black tracking-tight relative z-10">บันทึกเวลาทำงาน</h2>
-                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-1 relative z-10">Attendance Sync System</p>
-            </div>
-
-            <div class="p-8">
-                <!-- Status Box -->
-                <div id="statusBox" class="bg-slate-50 rounded-2xl p-4 mb-6 flex items-center gap-3 border border-slate-100">
-                    <div id="statusDot" class="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span id="status" class="text-[10px] font-black text-slate-500 uppercase tracking-wider">กำลังเชื่อมต่อ LINE...</span>
-                </div>
-
-                <div class="space-y-4">
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
-
-                    <button id="cameraBtn" disabled class="btn-animate w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl shadow-blue-100 disabled:opacity-50">
-                        <i class="fa-solid fa-camera text-lg"></i>
-                        เปิดกล้องถ่ายรูป
-                    </button>
-
-                    <div id="previewContainer" class="hidden">
-                        <div class="relative rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100 aspect-[3/4]">
-                            <img id="preview" class="w-full h-full object-cover">
-                            <div id="timeBadge" class="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md text-white p-3 rounded-2xl text-[10px] font-bold">
-                                <i class="fa-solid fa-calendar-check mr-2"></i><span id="timeText">-</span>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <!-- เอาปุ่มถ่ายใหม่ออก และปรับปุ่มส่งข้อมูลให้เต็มความกว้าง -->
-                            <button id="sendBtn" class="btn-animate w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg">
-                                <i class="fa-solid fa-paper-plane mr-2"></i>ส่งข้อมูลเข้างาน
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                
+                <!-- ปุ่มส่งข้อมูล -->
+                <button id="sendBtn" class="btn-animate w-full bg-emerald-500 text-white py-5 rounded-2xl font-black text-lg mt-5 shadow-lg shadow-emerald-100 flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-paper-plane"></i> ส่งข้อมูลเข้างาน
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Result Modal (เด้งตอนสำเร็จ) -->
-    <div id="resultModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-sm">
-        <div id="modalContent" class="bg-white w-full max-w-sm rounded-[3rem] p-10 text-center animate-modal shadow-2xl relative overflow-hidden">
+    <!-- ผลลัพธ์หลังส่งสำเร็จ (Modal) -->
+    <div id="resultModal" class="fixed inset-0 z-50 hidden items-center justify-center p-6 bg-slate-900/90 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[3rem] p-10 text-center animate-modal shadow-2xl">
             
-            <!-- On Time Success -->
-            <div id="onTimeSuccess" class="hidden">
-                <div class="h-28 w-28 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border-8 border-emerald-50">
+            <!-- กรณีตรงเวลา -->
+            <div id="onTimeBox" class="hidden">
+                <div class="h-24 w-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <i class="fa-solid fa-check text-5xl"></i>
                 </div>
                 <h3 class="text-2xl font-black text-slate-900">บันทึกสำเร็จ!</h3>
-                <p class="text-emerald-600 font-bold mt-2 text-sm uppercase tracking-widest">เข้างานตรงเวลา</p>
-                <p class="text-slate-400 text-xs mt-4">ระบบกำลังปิดหน้าต่างอัตโนมัติ...</p>
+                <p class="text-emerald-600 font-bold mt-2">เข้างานตรงเวลา</p>
             </div>
 
-            <!-- Late Warning -->
-            <div id="lateWarning" class="hidden">
-                <!-- นำ class animate-shake ออกแล้ว -->
-                <img src="https://i.postimg.cc/7YtdqNVk/depositphotos-23480907-stock-photo-human-hand-pointing.webp" alt="warning" class="w-32 h-32 mx-auto rounded-full object-cover border-8 border-rose-100 shadow-xl mb-6">
-                <h3 class="text-2xl font-black text-rose-600 uppercase">คุณมาสาย!</h3>
-                <p class="text-rose-500 font-bold mt-4 leading-relaxed bg-rose-50 p-4 rounded-2xl border border-rose-100">
+            <!-- กรณีมาสาย -->
+            <div id="lateBox" class="hidden">
+                <img src="https://i.postimg.cc/7YtdqNVk/depositphotos-23480907-stock-photo-human-hand-pointing.webp" class="w-32 h-32 mx-auto rounded-full object-cover border-4 border-rose-500 mb-6 shadow-lg">
+                <h3 class="text-2xl font-black text-rose-600">คุณมาสาย!</h3>
+                <p class="text-rose-500 font-bold mt-4 bg-rose-50 p-4 rounded-2xl border border-rose-100">
                     ⚠️ กรุณาโทรไปสารภาพความผิด<br>กับเจ๊เดี๋ยวนี้!
                 </p>
-                <p class="text-slate-400 text-[10px] mt-6 uppercase font-bold tracking-widest">บันทึกเวลาเข้าระบบแล้ว</p>
             </div>
 
+            <p class="text-slate-400 text-[10px] mt-8 uppercase font-bold tracking-widest">หน้าต่างนี้จะปิดลงอัตโนมัติ</p>
         </div>
     </div>
 
     <canvas id="canvas" class="hidden"></canvas>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-white/95 backdrop-blur-md z-50 hidden flex-col items-center justify-center">
-        <div class="h-16 w-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
-        <p id="loadingText" class="mt-6 font-black text-slate-900 text-xs uppercase tracking-widest">กำลังส่งข้อมูล...</p>
+    <!-- หน้ากากโหลดข้อมูล -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white/90 z-40 hidden flex-col items-center justify-center">
+        <div class="h-12 w-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p class="mt-4 font-black text-slate-900 text-xs tracking-widest uppercase">กำลังบันทึกข้อมูล...</p>
     </div>
 
     <script>
@@ -122,37 +96,37 @@
         const statusText = document.getElementById('status');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const resultModal = document.getElementById('resultModal');
-        const onTimeSuccess = document.getElementById('onTimeSuccess');
-        const lateWarning = document.getElementById('lateWarning');
 
         let userLineId = "";
         let finalImageData = "";
-        let isLateGlobal = false;
+        let isLate = false;
 
+        // เริ่มต้น LIFF
         liff.init({ liffId: LIFF_ID }).then(() => {
             if (!liff.isLoggedIn()) liff.login();
             else {
                 liff.getProfile().then(profile => {
                     userLineId = profile.userId;
                     statusText.innerText = "ระบบพร้อมใช้งาน";
-                    document.getElementById('statusDot').classList.replace('bg-blue-500', 'bg-emerald-500');
                     cameraBtn.disabled = false;
                 });
             }
-        });
+        }).catch(err => statusText.innerText = "Error: " + err.message);
 
+        // กดปุ่มเปิดกล้อง
         cameraBtn.onclick = () => cameraInput.click();
 
+        // เมื่อถ่ายรูปเสร็จ
         cameraInput.onchange = (event) => {
             const file = event.target.files[0];
             if (!file) return;
 
             statusText.innerText = "กำลังประมวลผลรูปภาพ...";
-            cameraBtn.classList.add('hidden');
+            cameraBtn.style.display = "none";
 
             const img = new Image();
             img.onload = () => {
-                const MAX_WIDTH = 1000;
+                const MAX_WIDTH = 800;
                 let width = img.width, height = img.height;
                 if (width > MAX_WIDTH) {
                     height = Math.floor((height * MAX_WIDTH) / width);
@@ -165,31 +139,27 @@
                 ctx.drawImage(img, 0, 0, width, height);
 
                 const now = new Date();
-                const h = now.getHours(), m = now.getMinutes();
-                isLateGlobal = (h > 8) || (h === 8 && m > 40); // กำหนดสาย 08:40
+                isLate = (now.getHours() > 8) || (now.getHours() === 8 && now.getMinutes() > 40);
 
-                const timeString = now.toLocaleString('th-TH', { 
-                    year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
-                });
-
-                ctx.fillStyle = isLateGlobal ? "rgba(225, 29, 72, 0.7)" : "rgba(15, 23, 42, 0.5)";
-                ctx.fillRect(0, height - 100, width, 100);
-                ctx.font = "bold 32px Sarabun, sans-serif";
+                const timeString = now.toLocaleString('th-TH');
+                ctx.fillStyle = isLate ? "rgba(225, 29, 72, 0.6)" : "rgba(0, 0, 0, 0.5)";
+                ctx.fillRect(0, height - 60, width, 60);
+                ctx.font = "bold 24px Sarabun, Arial";
                 ctx.fillStyle = "#ffffff";
-                ctx.fillText((isLateGlobal ? "🚨 สาย: " : "✅ เข้างาน: ") + timeString, 40, height - 45);
+                ctx.fillText((isLate ? "🚩 สาย: " : "📍 เวลา: ") + timeString, 20, height - 20);
 
-                finalImageData = canvas.toDataURL('image/jpeg', 0.8);
+                finalImageData = canvas.toDataURL('image/jpeg', 0.7);
                 preview.src = finalImageData;
-                document.getElementById('timeText').innerText = timeString;
                 previewContainer.classList.remove('hidden');
-                statusText.innerText = isLateGlobal ? "ตรวจพบการเข้างานสาย" : "เข้างานตรงเวลา";
+                statusText.innerText = "ตรวจสอบรูปภาพแล้วกดปุ่มส่ง";
             };
             img.src = URL.createObjectURL(file);
         };
 
+        // กดส่งข้อมูล
         sendBtn.onclick = async () => {
             if (!finalImageData) return;
+            
             sendBtn.disabled = true;
             loadingOverlay.classList.remove('hidden');
             loadingOverlay.classList.add('flex');
@@ -209,11 +179,8 @@
                     resultModal.classList.remove('hidden');
                     resultModal.classList.add('flex');
                     
-                    if (isLateGlobal) {
-                        lateWarning.classList.remove('hidden');
-                    } else {
-                        onTimeSuccess.classList.remove('hidden');
-                    }
+                    if (isLate) document.getElementById('lateBox').classList.remove('hidden');
+                    else document.getElementById('onTimeBox').classList.remove('hidden');
                     
                     setTimeout(() => liff.closeWindow(), 5000); 
                 } else {
