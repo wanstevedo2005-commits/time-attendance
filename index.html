@@ -98,20 +98,37 @@
         const resultModal = document.getElementById('resultModal');
 
         let userLineId = "";
+        // Keep the token obtained while LIFF is active. On iPhone the native
+        // camera can briefly background the LIFF view; asking LIFF for a new
+        // token only after returning from the camera may then return null.
+        let lineAccessToken = "";
         let finalImageData = "";
         let isLate = false;
 
         // เริ่มต้น LIFF
-        liff.init({ liffId: LIFF_ID }).then(() => {
-            if (!liff.isLoggedIn()) liff.login();
-            else {
-                liff.getProfile().then(profile => {
-                    userLineId = profile.userId;
-                    statusText.innerText = "ระบบพร้อมใช้งาน";
-                    cameraBtn.disabled = false;
-                });
+        async function initializeLiff() {
+            await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+
+            if (!liff.isLoggedIn()) {
+                throw new Error("กรุณาเปิดระบบจากเมนูในแอป LINE แล้วลองใหม่");
             }
-        }).catch(err => statusText.innerText = "Error: " + err.message);
+
+            const profile = await liff.getProfile();
+            const accessToken = liff.getAccessToken();
+            if (!accessToken) {
+                throw new Error("ไม่พบ LINE session กรุณาปิดแล้วเปิดระบบจากเมนู LINE ใหม่");
+            }
+
+            userLineId = profile.userId;
+            lineAccessToken = accessToken;
+            statusText.innerText = "ระบบพร้อมใช้งาน";
+            cameraBtn.disabled = false;
+        }
+
+        initializeLiff().catch(err => {
+            statusText.innerText = "ไม่สามารถเชื่อมต่อ LINE ได้";
+            alert("❌ " + err.message);
+        });
 
         // กดปุ่มเปิดกล้อง
         cameraBtn.onclick = () => cameraInput.click();
@@ -159,6 +176,14 @@
         // กดส่งข้อมูล
         sendBtn.onclick = async () => {
             if (!finalImageData) return;
+
+            // Do not call getAccessToken here: returning from the device camera
+            // may leave the LIFF SDK unable to read a token even though the
+            // already-issued token is still valid.
+            if (!userLineId || !lineAccessToken) {
+                alert("❌ LINE session หมดอายุ กรุณาปิดและเปิดระบบจากเมนู LINE ใหม่ก่อนถ่ายรูป");
+                return;
+            }
             
             sendBtn.disabled = true;
             loadingOverlay.classList.remove('hidden');
@@ -169,12 +194,19 @@
                     method: 'POST',
                     redirect: 'follow', 
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ userId: userLineId, image: finalImageData })
+                    body: JSON.stringify({
+                        userId: userLineId,
+                        accessToken: lineAccessToken,
+                        image: finalImageData
+                    })
                 });
                 
                 const result = await response.json();
                 
                 if (result.status === "success") {
+                    // The server is the source of truth for attendance status.
+                    // Keep the browser calculation only for the watermark preview.
+                    isLate = Boolean(result.isLate);
                     loadingOverlay.classList.add('hidden');
                     resultModal.classList.remove('hidden');
                     resultModal.classList.add('flex');
