@@ -62,13 +62,45 @@ function processUploadData(data) {
 }
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.adminBridge === '1') return getAdminBridgePage();
   return jsonResponse({ status: 'error', message: 'Admin API accepts POST requests only.' });
 }
 
+function getAdminBridgePage() {
+  const allowedOrigin = 'https://wanstevedo2005-commits.github.io';
+  const html = '<!doctype html><html><body><script>' +
+    'const ALLOWED_ORIGIN=' + JSON.stringify(allowedOrigin) + ';' +
+    'window.addEventListener("message",function(event){' +
+      'if(event.origin!==ALLOWED_ORIGIN||!event.data||event.data.type!=="admin-request")return;' +
+      'const source=event.source,id=event.data.id;' +
+      'google.script.run.withSuccessHandler(function(data){source.postMessage({type:"admin-response",id:id,data:data},event.origin);})' +
+      '.withFailureHandler(function(error){source.postMessage({type:"admin-response",id:id,error:error&&error.message?error.message:String(error)},event.origin);})' +
+      '.adminBridgeRequest(event.data.request);' +
+    '});' +
+    'window.top.postMessage({type:"admin-bridge-ready"},ALLOWED_ORIGIN);' +
+    '<\/script></body></html>';
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('Admin API Bridge')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function adminBridgeRequest(request) {
+  const data = request || {};
+  assertValidAdminKey(data.apiKey);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (data.action === 'admin_logs') return getAttendanceRows(ss);
+  if (data.action === 'update_name') return updateEmployeeNameData(ss, data.userId, data.newName);
+  throw new Error('Unsupported admin action.');
+}
+
 function updateEmployeeName(ss, userId, newName) {
+  return jsonResponse(updateEmployeeNameData(ss, userId, newName));
+}
+
+function updateEmployeeNameData(ss, userId, newName) {
   const id = String(userId || '').trim();
   const name = validateEmployeeName(newName);
-  if (!id || !name) return jsonResponse({ status: 'error', message: 'userId and newName are required.' });
+  if (!id || !name) return { status: 'error', message: 'userId and newName are required.' };
   const employeeSheet = ss.getSheetByName('Employee');
   if (employeeSheet) {
     const employees = employeeSheet.getDataRange().getValues();
@@ -87,7 +119,7 @@ function updateEmployeeName(ss, userId, newName) {
       if (String(rows[i][1]).trim() === id) logSheet.getRange(i + 1, 3).setValue(name);
     }
   }
-  return jsonResponse({ status: 'success' });
+  return { status: 'success' };
 }
 
 function getAttendanceLog(ss) {
