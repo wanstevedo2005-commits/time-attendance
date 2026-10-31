@@ -7,6 +7,14 @@
 function doPost(e) {
   try {
     const data = parsePostData(e);
+    if (data.action === 'admin_logs') {
+      assertValidAdminKey(data.apiKey);
+      return jsonResponse(getAttendanceRows(SpreadsheetApp.getActiveSpreadsheet()));
+    }
+    if (data.action === 'update_name') {
+      assertValidAdminKey(data.apiKey);
+      return updateEmployeeName(SpreadsheetApp.getActiveSpreadsheet(), data.userId, data.newName);
+    }
     data.userId = verifyLineAccessToken(data.accessToken).userId;
     return jsonResponse(processUploadData(data));
   }
@@ -53,23 +61,13 @@ function processUploadData(data) {
   };
 }
 
-/**
- * Retains log/name APIs but requires the administrator key. Dashboard callers
- * must pass ?apiKey=<ADMIN_API_KEY> on every request.
- */
 function doGet(e) {
-  if (!e || !e.parameter || !isValidAdminRequest(e.parameter)) {
-    return jsonResponse({ status: 'error', message: 'Unauthorized.' });
-  }
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return e.parameter.action === 'update_name'
-    ? updateEmployeeName(ss, e.parameter.userId, e.parameter.newName)
-    : getAttendanceLog(ss);
+  return jsonResponse({ status: 'error', message: 'Admin API accepts POST requests only.' });
 }
 
 function updateEmployeeName(ss, userId, newName) {
   const id = String(userId || '').trim();
-  const name = String(newName || '').trim();
+  const name = validateEmployeeName(newName);
   if (!id || !name) return jsonResponse({ status: 'error', message: 'userId and newName are required.' });
   const employeeSheet = ss.getSheetByName('Employee');
   if (employeeSheet) {
@@ -93,13 +91,16 @@ function updateEmployeeName(ss, userId, newName) {
 }
 
 function getAttendanceLog(ss) {
+  return jsonResponse(getAttendanceRows(ss));
+}
+
+function getAttendanceRows(ss) {
   const logSheet = ss.getSheetByName('Log');
-  if (!logSheet) return jsonResponse([]);
-  const rows = logSheet.getDataRange().getValues().slice(1).map(function (row) {
+  if (!logSheet) return [];
+  return logSheet.getDataRange().getValues().slice(1).map(function (row) {
     return { time: formatLogDate(row[0]), userId: String(row[1]), name: String(row[2]),
       image: String(row[3]), isLate: row[4] === 1 || String(row[4]).toLowerCase() === 'true' };
   }).reverse();
-  return jsonResponse(rows);
 }
 
 /** Sends independently to every configured chat; a failure does not stop later recipients. */
@@ -213,8 +214,18 @@ function getTelegramChatIds() {
   const ids = getRequiredProperty('TELEGRAM_CHAT_IDS').split(',').map(function (id) { return id.trim(); }).filter(Boolean);
   if (!ids.length) throw new Error('TELEGRAM_CHAT_IDS has no recipient IDs.'); return ids;
 }
-function isValidAdminRequest(params) {
-  const expected = getRequiredProperty('ADMIN_API_KEY'); return params.apiKey && String(params.apiKey) === expected;
+function assertValidAdminKey(apiKey) {
+  const expected = getRequiredProperty('ADMIN_API_KEY');
+  if (!apiKey || String(apiKey) !== expected) throw new Error('Unauthorized.');
+}
+function validateEmployeeName(value) {
+  const name = String(value || '').trim();
+  if (!name) return '';
+  if (name.length > 100) throw new Error('Employee name must not exceed 100 characters.');
+  if (/^[=+\-@]/.test(name) || /[\u0000-\u001F\u007F]/.test(name)) {
+    throw new Error('Employee name contains unsupported characters.');
+  }
+  return name;
 }
 function getRequiredProperty(key) {
   const value = PropertiesService.getScriptProperties().getProperty(key);
