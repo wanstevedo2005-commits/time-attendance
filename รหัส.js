@@ -49,6 +49,7 @@ function processUploadData(data) {
     }
     imageFile = saveAttendancePhoto(data.image, name, now);
     logSheet.appendRow([time, userId, name, imageFile.getUrl(), lateStatus]);
+    CacheService.getScriptCache().remove('admin-attendance-rows-v1');
   } finally {
     lock.releaseLock();
   }
@@ -88,9 +89,24 @@ function adminBridgeRequest(request) {
   const data = request || {};
   assertValidAdminKey(data.apiKey);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (data.action === 'admin_logs') return getAttendanceRows(ss);
-  if (data.action === 'update_name') return updateEmployeeNameData(ss, data.userId, data.newName);
+  if (data.action === 'admin_logs') return getCachedAttendanceRows(ss);
+  if (data.action === 'update_name') {
+    const result = updateEmployeeNameData(ss, data.userId, data.newName);
+    CacheService.getScriptCache().remove('admin-attendance-rows-v1');
+    return result;
+  }
   throw new Error('Unsupported admin action.');
+}
+
+function getCachedAttendanceRows(ss) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'admin-attendance-rows-v1';
+  const cached = cache.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+  const rows = getAttendanceRows(ss);
+  const serialized = JSON.stringify(rows);
+  if (serialized.length <= 90000) cache.put(cacheKey, serialized, 300);
+  return rows;
 }
 
 function updateEmployeeName(ss, userId, newName) {
