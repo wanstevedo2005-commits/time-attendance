@@ -72,6 +72,9 @@
             </div>
 
             <p class="text-slate-400 text-[10px] mt-8 uppercase font-bold tracking-widest">หน้าต่างนี้จะปิดลงอัตโนมัติ</p>
+            <p id="notificationWarning" class="hidden text-amber-700 text-xs font-bold mt-4 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                บันทึกเวลาแล้ว แต่ส่งข้อความแจ้งเตือนไป Telegram ไม่ครบ กรุณาแจ้งผู้ดูแลระบบ
+            </p>
         </div>
     </div>
 
@@ -85,7 +88,7 @@
 
     <script>
         const LIFF_ID = "2010049335-xhTAw8Mi"; 
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwzU-dzaz8We5FfURKIoTUgE_YaE401uaA-rC1rxr7F0znP7jWrVhJTSPUfe37Avu5low/exec";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwt1q2lwvbCFxkIJ49XTvRH6hKejC1RwRsNEZnPUMIvICzdyf9HrG44NvKt_Jmhy6bUNg/exec";
 
         const cameraInput = document.getElementById('cameraInput');
         const cameraBtn = document.getElementById('cameraBtn');
@@ -213,6 +216,9 @@
                     
                     if (isLate) document.getElementById('lateBox').classList.remove('hidden');
                     else document.getElementById('onTimeBox').classList.remove('hidden');
+                    if (result.telegramOk === false) {
+                        document.getElementById('notificationWarning').classList.remove('hidden');
+                    }
                     
                     setTimeout(() => liff.closeWindow(), 5000); 
                 } else {
