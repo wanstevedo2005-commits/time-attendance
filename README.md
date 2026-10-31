@@ -25,6 +25,6 @@ Optional: `TIMEZONE` (default `Asia/Bangkok`). The existing late rule remains af
 4. Run `testTelegramDirect` once. Execution logs show an independent result for every chat ID.
 5. Confirm the deployed web app accepts a LIFF check-in, rejects a second check-in on the same day, and writes the employee name from `Employee`.
 
-The dashboard must add `apiKey=<ADMIN_API_KEY>` to its GET requests. Photos are private by default; share the Drive folder only with managers who need access.
+The dashboard sends `admin_logs` and `update_name` requests by POST with the administrator key in the JSON body. Never embed the key in public source or put it in a URL. Photos are private by default; share the Drive folder only with managers who need access.
 
 Secrets are stored only in Script Properties, never in Git.
